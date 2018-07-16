@@ -6295,11 +6295,36 @@ int docomm(Pair *pair, Comm *comm) {
     return (*comm->func)(pair, buf, start);
 }
 
+size_t copyheaders(const char *exclude_header, size_t header_len, const char *message, char *buffer, size_t message_length)
+{
+	size_t copy_length = 0;
+	for(size_t i = 0 ; i < message_length ; i ++)
+	{
+		int found = 0;
+		size_t k;
+
+		if((message_length - i) >= header_len)
+			found = !memcmp(exclude_header, message+i, header_len*sizeof(char));
+
+		for(k=0 ; (k + i) < message_length ; k++)
+		{
+			if(!found)
+				buffer[copy_length++] = message[k+i];
+
+			if(message[k+i] == '\n')
+				break;
+		}
+		i+=k;
+	}
+	return copy_length;
+}
+
+
 int insheader(Pair *pair) {	/* insert header */
     ExBuf *ex = pair->b;	/* bottom */
     char *p;
     int bufmax = ex->bufmax;
-    int len, i;
+    int len, i, j;
     len = ex->start + ex->len;
     for (i=ex->start; i < len; i++) {
 	if (ex->buf[i] == '\n') break;
@@ -6318,6 +6343,7 @@ int insheader(Pair *pair) {	/* insert header */
 	bcopy(&ex->buf[i], &ex->buf[bufmax], len);
     }
     p = pair->stone->p;
+	j = i;
     i += strnparse(&ex->buf[i], bufmax - i, &p, pair->pair, 0xFF);
     ex->buf[i++] = '\r';
     ex->buf[i++] = '\n';
@@ -6326,8 +6352,16 @@ int insheader(Pair *pair) {	/* insert header */
 		"%d TCP %d: insheader start=%d, ins=%d, rest=%d, max=%d",
 		pair->stone->sd, pair->sd, ex->start, i-ex->start, len, ex->bufmax);
     }
-    if (len > 0)	/* restore */
-	bcopy(&ex->buf[bufmax], &ex->buf[i], len);
+	if (len > 0){	/* restore */
+		int k;
+		for(k = j ; k < i ; k++)
+			if(ex->buf[k] == ':')
+				break;
+		if(k < i)
+			len = copyheaders(&ex->buf[j], k-j+1, &ex->buf[bufmax], &ex->buf[i], len);
+		else
+			bcopy(&ex->buf[bufmax], &ex->buf[i], len);
+	}
     ex->len = i - ex->start + len;
     return ex->len;
 }
