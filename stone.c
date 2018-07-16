@@ -92,7 +92,7 @@
  * -DNT_SERVICE	  WindowsNT/2000 native service
  * -DUSE_TPROXY	  use TProxy
  */
-#define VERSION	"2.4LB"
+#define VERSION	"2.4w1"
 static char *CVS_ID =
 "@(#) $Id: stone.c,v 2.4 2016/10/07 02:31:51 hiroaki_sengoku Exp $";
 
